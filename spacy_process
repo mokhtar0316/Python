@@ -1,0 +1,37 @@
+import spacy
+
+# بارگذاری مدل spaCy برای زبان انگلیسی
+nlp = spacy.load("en_core_web_sm")
+
+def extract_facts(news_text):
+    # پردازش متن خبری
+    doc = nlp(news_text)
+    facts = []
+
+    # استخراج موجودیت‌ها و جملات برای استخراج فکت‌ها
+    for sent in doc.sents:
+        # شناسایی موجودیت‌ها و تعیین نوع آنها
+        entities = [ent.text for ent in sent.ents]
+
+        # جملاتی که در آنها داده‌های اقتصادی یا بازار کار ذکر شده است
+        if "economic data" in sent.text:
+            # تبدیل جمله به یک رشته ساده برای ذخیره در پرولوگ
+            facts.append(f"fact(economic_data, \"{sent.text.strip().lower()}\").")  # استفاده از کوتیشن برای رشته‌ها
+
+        elif "labor market" in sent.text:
+            # تبدیل جمله به یک رشته ساده برای ذخیره در پرولوگ
+            facts.append(f"fact(labor_market, \"{sent.text.strip().lower()}\").")  # استفاده از کوتیشن برای رشته‌ها
+
+    return facts
+
+# متن خبری نمونه
+news = "A series of key economic data points are slated for publication this week, with the state of the labor market coming into focus."
+
+# استخراج فکت‌ها از متن خبری
+facts = extract_facts(news)
+
+# ذخیره فکت‌ها در یک فایل پرولوگ
+with open("G:/swipl/Sample_Codes/facts.pl", "w") as f:
+    f.write("\n".join(facts))
+
+print("Facts saved to file.")
