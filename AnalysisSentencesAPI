@@ -1,0 +1,53 @@
+from flask import Flask, request, jsonify
+import subprocess
+import json
+import spacy
+
+app = Flask(__name__)
+nlp = spacy.load("en_core_web_sm")  # بارگذاری مدل spaCy
+
+# استخراج موجودیت‌ها از متن
+def extract_facts(text):
+    doc = nlp(text)
+    entities = []
+    for ent in doc.ents:
+        entities.append({"text": ent.text, "label": ent.label_})
+    return entities
+
+# تولید فکت‌های پرولوگ از موجودیت‌ها
+def generate_prolog_facts(entities):
+    prolog_facts = "\n".join(
+        [f"fact('{ent['text']}', {ent['label'].lower()})." for ent in entities]
+    )
+    return prolog_facts
+
+@app.route('/api_analysis', methods=['POST'])
+def api():
+    data = request.get_json()
+    news_text = data.get('news_text', '')
+
+    extracted_facts = extract_facts(news_text)
+
+    prolog_facts = generate_prolog_facts(extracted_facts)
+
+    # ذخیره فکت‌ها به فایل پرولوگ
+    with open('G:/swipl/Sample_Codes/data_analysis.pl', 'w') as f:
+        f.write(prolog_facts)
+
+    # اجرای تحلیل پرولوگ
+    result = subprocess.run(['swipl', '-s', 'G:/swipl/Sample_Codes/PrologAnalysisAPI.pl', '-g', 'main', '-t', 'halt'], capture_output=True, text=True)
+
+    output = result.stdout.strip()
+    err_output = result.stderr.strip()
+
+    response = {
+        'message': 'Data processed successfully!',
+        'input_text': news_text,
+        'extracted_facts': extracted_facts,
+        'prolog_output': output,
+        'err_output': err_output,
+    }
+    return jsonify(response), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
