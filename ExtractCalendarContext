@@ -1,0 +1,64 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import pandas as pd
+import time
+
+# تنظیمات Selenium و راه‌اندازی مرورگر
+options = webdriver.ChromeOptions()
+options.add_argument('--headless')  # اگر نمی‌خواهید مرورگر نمایش داده شود
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
+
+driver = webdriver.Chrome(options=options)
+
+def scrape_forex_factory_calendar():
+    url = "https://www.forexfactory.com/calendar"
+    driver.get(url)
+
+    # تأخیر برای بارگذاری اولیه
+    time.sleep(5)
+
+    # اطمینان از بارگیری کامل صفحه
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.ID, "calendar"))
+    )
+
+    # استخراج داده‌های رویدادها
+    events = []
+    rows = driver.find_elements(By.CSS_SELECTOR, "#calendar .calendar__row")
+
+    for row in rows:
+        try:
+            event_time = row.find_element(By.CSS_SELECTOR, ".calendar__time").text
+            currency = row.find_element(By.CSS_SELECTOR, ".calendar__currency").text
+            impact = row.find_element(By.CSS_SELECTOR, ".impact .icon").get_attribute("title")
+            event_name = row.find_element(By.CSS_SELECTOR, ".calendar__event").text
+            actual = row.find_element(By.CSS_SELECTOR, ".calendar__actual").text
+            forecast = row.find_element(By.CSS_SELECTOR, ".calendar__forecast").text
+            previous = row.find_element(By.CSS_SELECTOR, ".calendar__previous").text
+
+            events.append({
+                "Time": event_time,
+                "Currency": currency,
+                "Impact": impact,
+                "Event": event_name,
+                "Actual": actual,
+                "Forecast": forecast,
+                "Previous": previous
+            })
+        except Exception as e:
+            print(f"Error scraping row: {e}")
+
+    return events
+
+
+# اجرای اسکریپت و ذخیره داده‌ها در فایل
+try:
+    events = scrape_forex_factory_calendar()
+    df = pd.DataFrame(events)
+    df.to_csv("forex_factory_calendar.csv", index=False)
+    print("Data saved to forex_factory_calendar.csv")
+finally:
+    driver.quit()
