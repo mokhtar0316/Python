@@ -1,0 +1,10 @@
+from PIL import Image
+import pytesseract
+
+# تصویر Captcha را بارگذاری کنید
+image = Image.open("captcha_image.png")
+
+# استفاده از Tesseract OCR
+captcha_text = pytesseract.image_to_string(image)
+
+print("Captcha Solved:", captcha_text)
