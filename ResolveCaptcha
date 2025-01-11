@@ -1,0 +1,19 @@
+import requests
+
+# کلید API از 2Captcha
+api_key = "YOUR_API_KEY"
+captcha_image_path = "captcha_image.png"
+
+# ارسال Captcha برای حل
+with open(captcha_image_path, "rb") as f:
+    response = requests.post("http://2captcha.com/in.php", data={"key": api_key, "method": "post"}, files={"file": f})
+    captcha_id = response.text.split('|')[1]
+
+# بازیابی پاسخ
+while True:
+    response = requests.get(f"http://2captcha.com/res.php?key={api_key}&action=get&id={captcha_id}")
+    if "CAPCHA_NOT_READY" not in response.text:
+        captcha_text = response.text.split('|')[1]
+        break
+
+print("Captcha Solved:", captcha_text)
