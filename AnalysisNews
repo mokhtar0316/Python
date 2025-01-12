@@ -2,6 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 from textblob import TextBlob
 import nltk
+import sys
+import codecs
+
+# تنظیم کدگذاری پیش‌فرض (حل مشکل چاپ در ویندوز)
+sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
 # دانلود ابزارهای NLTK (فقط بار اول اجرا)
 nltk.download('punkt')
@@ -38,7 +43,7 @@ def analyze_sentiment(text):
 # 4. اجرای برنامه
 if __name__ == "__main__":
     # نمونه لینک (می‌توانید تغییر دهید)
-    url = "https://www.bbc.com/news/world-61400000"
+    url = "https://www.cnbc.com/us-economy/"
     
     print("در حال استخراج محتوا از سایت...")
     content = scrape_website(url)
