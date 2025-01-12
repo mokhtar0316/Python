@@ -1,0 +1,72 @@
+import sys
+import codecs
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from textblob import TextBlob
+import nltk
+import time
+
+# تنظیم کدگذاری پیش‌فرض برای خروجی
+sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+
+# دانلود ابزارهای NLTK (فقط بار اول اجرا)
+nltk.download('punkt')
+
+# 1. استخراج محتوای یک سایت خبری با Selenium
+def scrape_website_with_selenium(url):
+    try:
+        # تنظیم مرورگر Chrome
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless")  # اجرای مرورگر بدون رابط گرافیکی
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        
+        # باز کردن وب‌سایت
+        driver.get(url)
+        time.sleep(5)  # زمان برای بارگذاری کامل صفحه
+        
+        # فرض می‌کنیم محتوای اصلی در تگ <p> قرار دارد
+        paragraphs = driver.find_elements(By.TAG_NAME, "p")
+        content = " ".join([para.text for para in paragraphs])
+        
+        # بستن مرورگر
+        driver.quit()
+        return content
+    except Exception as e:
+        print(f"خطا: {e}")
+        return None
+
+# 2. پیش‌پردازش متن
+def preprocess_text(text):
+    # حذف کاراکترهای غیرضروری
+    clean_text = text.replace("\n", " ").strip()
+    return clean_text
+
+# 3. تحلیل احساسات
+def analyze_sentiment(text):
+    blob = TextBlob(text)
+    sentiment = blob.sentiment
+    return sentiment
+
+# 4. اجرای برنامه
+if __name__ == "__main__":
+    # نمونه لینک (می‌توانید تغییر دهید)
+    url = "https://www.forexfactory.com/calendar"
+    
+    print("در حال استخراج محتوا از سایت...")
+    content = scrape_website_with_selenium(url)
+    
+    if content:
+        print("پیش‌پردازش متن...")
+        clean_content = preprocess_text(content)
+        
+        print("تحلیل احساسات...")
+        sentiment = analyze_sentiment(clean_content)
+        
+        print("\nنتایج تحلیل:")
+        print(f"متن استخراج‌شده: {clean_content[:200]}...")  # نمایش 200 کاراکتر اول
+        print(f"قطبیت (Polarity): {sentiment.polarity}")  # عددی بین -1 (منفی) تا 1 (مثبت)
+        print(f"ذهنیت (Subjectivity): {sentiment.subjectivity}")  # عددی بین 0 (عینی) تا 1 (ذهنی)
+    else:
+        print("محتوایی یافت نشد.")
