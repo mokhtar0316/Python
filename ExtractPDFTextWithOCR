@@ -1,0 +1,42 @@
+import pdf2image
+import pytesseract
+import arabic_reshaper
+from bidi.algorithm import get_display
+import re
+import sys
+
+sys.stdout.reconfigure(encoding='utf-8')
+
+# مسیر Tesseract را مشخص کنید
+pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+
+def clean_text(text):
+    """پاکسازی متن از نویسه‌های غیرمجاز و فاصله‌های اضافی"""
+    text = re.sub(r'[^\w\s\u0600-\u06FF۰۱۲۳۴۵۶۷۸۹]', '', text)  # حفظ اعداد فارسی و حروف
+    text = re.sub(r'\s+', ' ', text)  # حذف فاصله‌های اضافی
+    return text.strip()
+
+def extract_farsi_text(pdf_path):
+    text = ""
+    images = pdf2image.convert_from_path(pdf_path, poppler_path=r"C:\\poppler-24.08.0-0\\poppler-24.08.0\\Library\\bin")
+
+    for img in images:
+        extracted_text = pytesseract.image_to_string(img, lang='fas', config='-c preserve_interword_spaces=1 -c tessedit_char_whitelist=۰۱۲۳۴۵۶۷۸۹')  
+        if extracted_text:
+            cleaned_text = clean_text(extracted_text)  # پاکسازی اولیه متن
+            reshaped_text = arabic_reshaper.reshape(cleaned_text)  # اصلاح شکل حروف فارسی
+            bidi_text = get_display(reshaped_text)  # تنظیم جهت نوشتار
+            text += bidi_text + "\n\n"
+
+    return text
+
+# مسیر فایل PDF
+pdf_path = "G:\\PythonTest\\TwoPDF\\One.pdf"
+farsi_text = extract_farsi_text(pdf_path)
+
+# ذخیره متن در فایل متنی
+with open("output.txt", "w", encoding="utf-8") as file:
+    file.write(farsi_text)
+
+print("✅ متن فارسی با موفقیت استخراج و ذخیره شد!")
+print(farsi_text)
