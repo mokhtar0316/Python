@@ -1,0 +1,82 @@
+import pdfplumber
+import difflib
+import re
+from docx import Document
+import arabic_reshaper
+from bidi.algorithm import get_display
+import pytesseract
+from pdf2image import convert_from_path
+import sys
+
+sys.stdout.reconfigure(encoding='utf-8')
+
+def ocr_pdf(pdf_path):
+    """استخراج متن از PDF با استفاده از OCR در صورت لزوم"""
+    images = convert_from_path(pdf_path)
+    text = ""
+    for img in images:
+        text += pytesseract.image_to_string(img, lang="fas") + "\n"
+    return text.strip()
+
+def extract_text_from_pdf(pdf_path):
+    """استخراج متن از یک فایل PDF در صورتی که قابل خواندن باشد"""
+    text = ""
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            extracted_text = page.extract_text()
+            if extracted_text:
+                text += extracted_text + "\n"
+    return text.strip() if text else ocr_pdf(pdf_path)
+
+def clean_text(text):
+    """حذف نویزهای اضافی"""
+    text = re.sub(r'cid\d+', '', text)  # حذف متن‌های cid مثل cid123
+    text = re.sub(r'[^\w\s؀-ۿ.,؛؟!]+', '', text)  # حذف نویزها، حفظ علائم مهم
+    text = re.sub(r'\s+', ' ', text).strip()  # حذف فاصله‌های اضافی
+    return text
+
+def fix_persian_text(text):
+    """اصلاح ترتیب و نمایش متون فارسی"""
+    reshaped_text = arabic_reshaper.reshape(text)
+    return get_display(reshaped_text)
+
+def compare_texts(text1, text2):
+    """مقایسه دو متن و نمایش تفاوت‌ها"""
+    d = difflib.ndiff(text1.splitlines(), text2.splitlines())
+    return [line for line in d if line.startswith("- ") or line.startswith("+ ")]
+
+def save_differences_to_word(differences, output_path):
+    """ذخیره تفاوت‌ها در فایل ورد به صورت جدول"""
+    doc = Document()
+    doc.add_heading("تفاوت‌های بین دو فایل PDF", level=1)
+    
+    table = doc.add_table(rows=1, cols=2)
+    table.style = "Table Grid"
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = "نوع تغییر"
+    hdr_cells[1].text = "متن"
+    
+    for diff in differences:
+        row_cells = table.add_row().cells
+        row_cells[0].text = "افزوده شده" if diff.startswith("+ ") else "حذف شده"
+        row_cells[1].text = fix_persian_text(diff[2:])
+    
+    doc.save(output_path)
+    print(f"تفاوت‌ها در فایل '{output_path}' ذخیره شد.")
+
+if __name__ == "__main__":
+    pdf1_path = "G:\\PythonTest\\TwoPDF\\One.pdf"
+    pdf2_path = "G:\\PythonTest\\TwoPDF\\Two.pdf"
+    output_word_path = "differences.txt"
+    
+    text1 = clean_text(extract_text_from_pdf(pdf1_path))
+    text2 = clean_text(extract_text_from_pdf(pdf2_path))
+    
+    print(text1)
+
+    #differences = compare_texts(text1, text2)
+    
+    #if differences:
+   #     save_differences_to_word(differences, output_word_path)
+   # else:
+   #     print("هیچ تفاوتی یافت نشد.")
